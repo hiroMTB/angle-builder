@@ -1,0 +1,38 @@
+name: Build ANGLE macOS Universal
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build-angle:
+    name: Check environment
+    runs-on: macos-14
+    steps:
+      - name: Check Python availability
+        run: |
+          echo "macOS:"
+          sw_vers
+          if ! command -v python3 >/dev/null 2>&1; then
+            echo "❌ Python3 not found!"
+            exit 1
+          fi
+          echo "✅ Python3 found: $(python3 --version)"
+          
+      - name: Clone depot_tools
+        run: |
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git  $HOME/depot_tools
+
+      - name: Add depot_tools to PATH
+        id: set-path
+        run: |
+          echo "$HOME/depot_tools" >> "$GITHUB_PATH"
+
+      - name: check PATH
+        id: check-path
+        run: echo "$PATH"
+
+      - name: Check gclient version
+        id: check-gclient
+        run: gclient sync --version
