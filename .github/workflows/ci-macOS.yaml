@@ -1,9 +1,19 @@
 name: Build ANGLE macOS Universal
 
+permissions:
+  contents: write
+
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - develop
+    tags:
+      - 'v*'
   pull_request:
+    branches:
+      - main
+      - develop
 
 jobs:
   check-environmet:
@@ -327,3 +337,45 @@ jobs:
             libGLESv2.dylib
             libEGL.dylib
 
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [merge-release, merge-debug]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download Debug build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: lib-debug-universal
+          path: angle
+
+      - name: Download Release build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: lib-release-universal
+          path: angle
+
+      - name: List all .dylib files with full paths
+        run: find . -name '*.dylib' -exec ls -lh {} \;
+
+      - name: Extract ANGLE commit hash from .gclient file
+        id: angle
+        run: |
+          hash=$(grep '"revision":' dot.gclient_for_macOS | sed -E 's/.*"revision": *"([a-f0-9]{40})".*/\1/')
+          echo "hash=$hash"
+          echo "hash=$hash" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          name: "ANGLE library for macOS ${{github.ref_name}}"
+          body: |
+            🔨 Built from ANGLE commit: [`${{ steps.angle.outputs.hash }}`](https://github.com/google/angle/commits/${{ steps.angle.outputs.hash }})      
+          artifacts: |
+            angle/libEGL.dylib
+            angle/libGLESv2.dylib
+            angle/libEGL-debug.dylib
+            angle/libGLESv2-debug.dylib
+            dot.gclient_for_macOS
