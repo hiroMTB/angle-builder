@@ -7,32 +7,135 @@ on:
 
 jobs:
   build-angle:
-    name: Check environment
+    name: Build ANGLE macOS
     runs-on: macos-14
     steps:
-      - name: Check Python availability
-        run: |
-          echo "macOS:"
-          sw_vers
-          if ! command -v python3 >/dev/null 2>&1; then
-            echo "❌ Python3 not found!"
-            exit 1
-          fi
-          echo "✅ Python3 found: $(python3 --version)"
+      # - name: Check Python availability
+      #   run: |
+      #     echo "macOS:"
+      #     sw_vers
+      #     if ! command -v python3 >/dev/null 2>&1; then
+      #       echo "❌ Python3 not found!"
+      #       exit 1
+      #     fi
+      #     echo "✅ Python3 found: $(python3 --version)"
           
-      - name: Clone depot_tools
+      - name: Clone depot_tools   
         run: |
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git  $HOME/depot_tools
-
-      - name: Add depot_tools to PATH
-        id: set-path
-        run: |
           echo "$HOME/depot_tools" >> "$GITHUB_PATH"
 
-      - name: check PATH
-        id: check-path
-        run: echo "$PATH"
+      # Check out this repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Check gclient version
-        id: check-gclient
-        run: gclient sync --version
+      # Use chache if no change in dot.gclient_for_macOS
+      - name: Cache ANGLE sync
+        uses: actions/cache@v3
+        with:
+          path: |
+            angle
+          key: angle-cache-${{ hashFiles('dot.gclient_for_macOS') }}
+          restore-keys: |
+            angle-cache-
+
+      - name: prepare .gclient file
+        run: |
+          ls -la .
+          mv ./dot.gclient_for_macOS ./.gclient
+
+      - name: sync angle repo
+        run: |
+          echo "Syncing ANGLE repo..."
+          gclient sync
+          echo "Syncing ANGLE repo done."
+          cd angle
+          ls -la .
+
+      # Debug arm64
+      - name: generate Debug arm64 build files
+        run: |
+          gn --version
+          cd angle
+          mkdir -p out/Debug/arm64
+          gn gen out/Debug/arm64 --args="
+            is_component_build=false
+            use_custom_libcxx=false
+            angle_build_tests=false
+            build_with_chromium=false
+            angle_enable_d3d9=false
+            angle_enable_d3d11=false
+            angle_enable_gl=false
+            angle_enable_metal=true
+            angle_enable_vulkan=false
+            angle_enable_cl=false
+            angle_enable_wgpu=false
+            angle_enable_swiftshader=false
+            angle_enable_hlsl=false
+            angle_has_rapidjson=false
+            angle_build_vulkan_system_info=false
+            angle_enable_overlay=false
+            use_glib=false
+            angle_enable_trace=false
+            target_cpu=\"arm64\"
+            is_debug=true"
+
+      - name: build Debug arm64
+        run: |
+          cd angle
+          autoninja -C out/Debug/arm64 libEGL libGLESv2
+
+
+      ## Debug x64
+      - name: generate Debug x64 build files
+        run: |          
+          cd angle
+          mkdir -p out/Debug/x64
+          gn gen out/Debug/x64 --args="
+            is_component_build=false
+            use_custom_libcxx=false
+            angle_build_tests=false
+            build_with_chromium=false
+            angle_enable_d3d9=false
+            angle_enable_d3d11=false
+            angle_enable_gl=false
+            angle_enable_metal=true
+            angle_enable_vulkan=false
+            angle_enable_cl=false
+            angle_enable_wgpu=false
+            angle_enable_swiftshader=false
+            angle_enable_hlsl=false
+            angle_has_rapidjson=false
+            angle_build_vulkan_system_info=false
+            angle_enable_overlay=false
+            use_glib=false
+            angle_enable_trace=false
+            target_cpu=\"x64\"
+            is_debug=true"
+
+      - name: build Debug x64
+        run: |
+          cd angle
+          autoninja -C out/Debug/x64 libEGL libGLESv2
+
+      - name: Merge arm64 and x64 GLESv2
+        run: |
+          cd angle
+          lipo -create \
+              ./out/Debug/arm64/libGLESv2.dylib \
+              ./out/Debug/x64/libGLESv2.dylib \
+              -output out/Debug/libGLESv2-debug.dylib
+
+      - name: Merge arm64 and x64 EGL
+        run: |
+          cd angle
+          lipo -create \
+              ./out/Debug/arm64/libEGLv2.dylib \
+              ./out/Debug/x64/libEGLv2.dylib \
+              -output out/Debug/libEGL-debug.dylib
+
+      - name: Debug cache state
+        run: |
+          echo "angle contents:"
+          ls -la angle | head
+          echo ".gclient exists?"; ls -la .gclient || echo "missing"
