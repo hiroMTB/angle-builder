@@ -6,136 +6,322 @@ on:
   pull_request:
 
 jobs:
-  build-angle:
-    name: Build ANGLE macOS
+  check-environmet:
+    name: Check environment
     runs-on: macos-14
     steps:
-      # - name: Check Python availability
-      #   run: |
-      #     echo "macOS:"
-      #     sw_vers
-      #     if ! command -v python3 >/dev/null 2>&1; then
-      #       echo "❌ Python3 not found!"
-      #       exit 1
-      #     fi
-      #     echo "✅ Python3 found: $(python3 --version)"
-          
-      - name: Clone depot_tools   
+      - name: Check Python availability
         run: |
-          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git  $HOME/depot_tools
-          echo "$HOME/depot_tools" >> "$GITHUB_PATH"
+          echo "macOS:"
+          sw_vers
+          if ! command -v python3 >/dev/null 2>&1; then
+            echo "❌ Python3 not found!"
+            exit 1
+          fi
+          echo "Python3 found: $(python3 --version)"
+      - name: Check MacOS XCode version
+        run: |
+          echo "macOS version:"
+          sw_vers
 
-      # Check out this repository
+  sync-angle:
+    name: setup depot_tools and sync ANGLE
+    runs-on: macos-14
+    needs: check-environmet
+    steps:
+        - name: Checkout repository
+          uses: actions/checkout@v3
+
+        # chache depot_tools
+        - name: Cache depot_tools
+          uses: actions/cache@v3
+          with:
+            path: "depot_tools"
+            key: depot-tools-cache-v1
+            restore-keys: depot-tools-
+
+        # depot_tools PATH
+        - name: Setup depot_tools
+          run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
+
+        # chache /angle folder if no change in dot.gclient_for_macOS
+        - name: Cache ANGLE checkout
+          uses: actions/cache@v3
+          with:
+            path: angle
+            key: angle-cache-${{ hashFiles('dot.gclient_for_macOS') }}
+            restore-keys: angle-cache-
+  
+        # Rename dot.gclient_for_macOS to .gclient file
+        - name: Prepare .gclient file
+          run: mv dot.gclient_for_macOS .gclient
+
+        - name: Sync ANGLE repository
+          run: gclient sync
+
+        # Check commit hash and /angle folder 
+        - name: Check ANGLE repository
+          run: |
+            echo "ANGLE commit:"
+            git log -1 --oneline
+
+            echo "/angle"
+            ls -al angle
+
+            echo "/angle/third_party"
+            ls -al angle/third_party
+
+  build-arm64-debug:
+    name: Build Debug arm64
+    runs-on: macos-14
+    needs: sync-angle
+
+    steps:
+        - name: Checkout repository
+          uses: actions/checkout@v3
+
+        # chache depot_tools
+        - name: Cache depot_tools
+          uses: actions/cache@v3
+          with:
+            path: "depot_tools"
+            key: depot-tools-cache-v1
+            restore-keys: depot-tools-
+
+        # Install depot_tools if not available by cache
+        - name: Setup depot_tools
+          run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
+
+        - name: Restore ANGLE from cache
+          uses: actions/cache@v3
+          with:
+            path: angle
+            key: angle-cache-${{ hashFiles('dot.gclient_for_macOS') }}
+            restore-keys: angle-cache-
+
+        - name: Generate Buid Files Debug arm64
+          run: |
+            cd angle
+            gn --version
+            gn gen out/Debug/arm64 --args="is_component_build=false use_custom_libcxx=false angle_build_tests=false build_with_chromium=false angle_enable_d3d9=false angle_enable_d3d11=false angle_enable_gl=false angle_enable_metal=true angle_enable_vulkan=false angle_enable_cl=false angle_enable_wgpu=false angle_enable_swiftshader=false angle_enable_hlsl=false angle_has_rapidjson=false angle_build_vulkan_system_info=false angle_enable_overlay=false use_glib=false angle_enable_trace=false target_cpu=\"arm64\" is_debug=true"
+
+        - name: Build Debug arm64 dylibs
+          run: |
+            cd angle
+            autoninja -C out/Debug/arm64 libEGL libGLESv2
+
+        - name: Upload dylibs
+          uses: actions/upload-artifact@v4
+          with:
+            name: lib-debug-arm64
+            path: angle/out/Debug/arm64/lib*.dylib
+
+  build-x64-debug:
+    name: Build Debug x64
+    runs-on: macos-14
+    needs: sync-angle
+
+    steps:
+        - name: Checkout repository
+          uses: actions/checkout@v3
+
+        - name: Cache depot_tools
+          uses: actions/cache@v3
+          with:
+            path: "depot_tools"
+            key: depot-tools-cache-v1
+            restore-keys: depot-tools-
+
+        - name: Setup depot_tools
+          run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
+
+        - name: Restore ANGLE from cache
+          uses: actions/cache@v3
+          with:
+            path: angle
+            key: angle-cache-${{ hashFiles('dot.gclient_for_macOS') }}
+            restore-keys: angle-cache-
+
+        - name: Generate Buid Files Debug x64
+          run: |
+            cd angle
+            gn --version
+            gn gen out/Debug/x64 --args="is_component_build=false use_custom_libcxx=false angle_build_tests=false build_with_chromium=false angle_enable_d3d9=false angle_enable_d3d11=false angle_enable_gl=false angle_enable_metal=true angle_enable_vulkan=false angle_enable_cl=false angle_enable_wgpu=false angle_enable_swiftshader=false angle_enable_hlsl=false angle_has_rapidjson=false angle_build_vulkan_system_info=false angle_enable_overlay=false use_glib=false angle_enable_trace=false target_cpu=\"x64\" is_debug=true"
+
+        - name: Build Debug x64 dylibs
+          run: |
+            cd angle
+            autoninja -C out/Debug/x64 libEGL libGLESv2
+
+        - name: Upload dylibs
+          uses: actions/upload-artifact@v4
+          with:
+            name: lib-debug-x64
+            path: angle/out/Debug/x64/lib*.dylib
+
+  merge-debug:
+    name: Merge Debug arm64 and x64 dylibs
+    runs-on: macos-14
+    needs: [build-arm64-debug, build-x64-debug]
+
+    steps:
+      - name: Download arm64 dylibs
+        uses: actions/download-artifact@v4
+        with:
+          name: lib-debug-arm64
+          path: arm64
+
+      - name: Download x64 dylibs
+        uses: actions/download-artifact@v4
+        with:
+          name: lib-debug-x64
+          path: x64
+
+      - name: Merge with lipo
+        run: |
+          lipo -create \
+            arm64/libGLESv2.dylib \
+            x64/libGLESv2.dylib \
+            -output libGLESv2-debug.dylib
+
+          lipo -create \
+            arm64/libEGL.dylib \
+            x64/libEGL.dylib \
+            -output libEGL-debug.dylib
+
+      - name: Upload merged universal dylibs
+        uses: actions/upload-artifact@v4
+        with:
+          name: lib-debug-universal
+          path: |
+            libGLESv2-debug.dylib
+            libEGL-debug.dylib
+
+  #
+  # Release
+  #
+
+  build-arm64-release:
+    name: Build Release arm64
+    runs-on: macos-14
+    needs: sync-angle
+
+    steps:
+        - name: Checkout repository
+          uses: actions/checkout@v3
+
+        - name: Cache depot_tools
+          uses: actions/cache@v3
+          with:
+            path: "depot_tools"
+            key: depot-tools-cache-v1
+            restore-keys: depot-tools-
+
+        - name: Setup depot_tools
+          run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
+
+        - name: Restore ANGLE from cache
+          uses: actions/cache@v3
+          with:
+            path: angle
+            key: angle-cache-${{ hashFiles('dot.gclient_for_macOS') }}
+            restore-keys: angle-cache-
+
+        - name: Generate Buid Files Release arm64
+          run: |
+            cd angle
+            gn --version
+            gn gen out/Release/arm64 --args="is_component_build=false use_custom_libcxx=false angle_build_tests=false build_with_chromium=false angle_enable_d3d9=false angle_enable_d3d11=false angle_enable_gl=false angle_enable_metal=true angle_enable_vulkan=false angle_enable_cl=false angle_enable_wgpu=false angle_enable_swiftshader=false angle_enable_hlsl=false angle_has_rapidjson=false angle_build_vulkan_system_info=false angle_enable_overlay=false use_glib=false angle_enable_trace=false target_cpu=\"arm64\" is_debug=false"
+
+        - name: Build Release arm64 dylibs
+          run: |
+            cd angle
+            autoninja -C out/Release/arm64 libEGL libGLESv2
+
+        - name: Upload dylibs
+          uses: actions/upload-artifact@v4
+          with:
+            name: lib-release-arm64
+            path: angle/out/Release/arm64/lib*.dylib
+
+  build-x64-release:
+    name: Build Release x64
+    runs-on: macos-14
+    needs: sync-angle
+
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Use chache if no change in dot.gclient_for_macOS
-      - name: Cache ANGLE sync
+      - name: Cache depot_tools
         uses: actions/cache@v3
         with:
-          path: |
-            angle
+          path: "depot_tools"
+          key: depot-tools-cache-v1
+          restore-keys: depot-tools-
+
+      - name: Setup depot_tools
+        run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
+
+      - name: Restore ANGLE from cache
+        uses: actions/cache@v3
+        with:
+          path: angle
           key: angle-cache-${{ hashFiles('dot.gclient_for_macOS') }}
-          restore-keys: |
-            angle-cache-
+          restore-keys: angle-cache-
 
-      - name: prepare .gclient file
+      - name: Generate Buid Files Release x64
         run: |
-          ls -la .
-          mv ./dot.gclient_for_macOS ./.gclient
-
-      - name: sync angle repo
-        run: |
-          echo "Syncing ANGLE repo..."
-          gclient sync
-          echo "Syncing ANGLE repo done."
           cd angle
-          ls -la .
-
-      # Debug arm64
-      - name: generate Debug arm64 build files
-        run: |
           gn --version
-          cd angle
-          mkdir -p out/Debug/arm64
-          gn gen out/Debug/arm64 --args="
-            is_component_build=false
-            use_custom_libcxx=false
-            angle_build_tests=false
-            build_with_chromium=false
-            angle_enable_d3d9=false
-            angle_enable_d3d11=false
-            angle_enable_gl=false
-            angle_enable_metal=true
-            angle_enable_vulkan=false
-            angle_enable_cl=false
-            angle_enable_wgpu=false
-            angle_enable_swiftshader=false
-            angle_enable_hlsl=false
-            angle_has_rapidjson=false
-            angle_build_vulkan_system_info=false
-            angle_enable_overlay=false
-            use_glib=false
-            angle_enable_trace=false
-            target_cpu=\"arm64\"
-            is_debug=true"
+          gn gen out/Release/x64 --args="is_component_build=false use_custom_libcxx=false angle_build_tests=false build_with_chromium=false angle_enable_d3d9=false angle_enable_d3d11=false angle_enable_gl=false angle_enable_metal=true angle_enable_vulkan=false angle_enable_cl=false angle_enable_wgpu=false angle_enable_swiftshader=false angle_enable_hlsl=false angle_has_rapidjson=false angle_build_vulkan_system_info=false angle_enable_overlay=false use_glib=false angle_enable_trace=false target_cpu=\"x64\" is_debug=false"
 
-      - name: build Debug arm64
+      - name: Build Release x64 dylibs
         run: |
           cd angle
-          autoninja -C out/Debug/arm64 libEGL libGLESv2
+          autoninja -C out/Release/x64 libEGL libGLESv2
 
+      - name: Upload dylibs
+        uses: actions/upload-artifact@v4
+        with:
+          name: lib-release-x64
+          path: angle/out/Release/x64/lib*.dylib
 
-      ## Debug x64
-      - name: generate Debug x64 build files
-        run: |          
-          cd angle
-          mkdir -p out/Debug/x64
-          gn gen out/Debug/x64 --args="
-            is_component_build=false
-            use_custom_libcxx=false
-            angle_build_tests=false
-            build_with_chromium=false
-            angle_enable_d3d9=false
-            angle_enable_d3d11=false
-            angle_enable_gl=false
-            angle_enable_metal=true
-            angle_enable_vulkan=false
-            angle_enable_cl=false
-            angle_enable_wgpu=false
-            angle_enable_swiftshader=false
-            angle_enable_hlsl=false
-            angle_has_rapidjson=false
-            angle_build_vulkan_system_info=false
-            angle_enable_overlay=false
-            use_glib=false
-            angle_enable_trace=false
-            target_cpu=\"x64\"
-            is_debug=true"
+  merge-release:
+    name: Merge Release arm64 and x64 dylibs
+    runs-on: macos-14
+    needs: [build-arm64-release, build-x64-release]
 
-      - name: build Debug x64
+    steps:
+      - name: Download arm64 dylibs
+        uses: actions/download-artifact@v4
+        with:
+          name: lib-release-arm64
+          path: release-arm64
+
+      - name: Download x64 dylibs
+        uses: actions/download-artifact@v4
+        with:
+          name: lib-release-x64
+          path: release-x64
+
+      - name: Merge with lipo
         run: |
-          cd angle
-          autoninja -C out/Debug/x64 libEGL libGLESv2
-
-      - name: Merge arm64 and x64 GLESv2
-        run: |
-          cd angle
           lipo -create \
-              ./out/Debug/arm64/libGLESv2.dylib \
-              ./out/Debug/x64/libGLESv2.dylib \
-              -output out/Debug/libGLESv2-debug.dylib
+            release-arm64/libGLESv2.dylib \
+            release-x64/libGLESv2.dylib \
+            -output libGLESv2.dylib
 
-      - name: Merge arm64 and x64 EGL
-        run: |
-          cd angle
           lipo -create \
-              ./out/Debug/arm64/libEGLv2.dylib \
-              ./out/Debug/x64/libEGLv2.dylib \
-              -output out/Debug/libEGL-debug.dylib
+            release-arm64/libEGL.dylib \
+            release-x64/libEGL.dylib \
+            -output libEGL.dylib
 
-      - name: Debug cache state
-        run: |
-          echo "angle contents:"
-          ls -la angle | head
-          echo ".gclient exists?"; ls -la .gclient || echo "missing"
+      - name: Upload merged universal dylibs
+        uses: actions/upload-artifact@v4
+        with:
+          name: lib-release-universal
+          path: |
+            libGLESv2.dylib
+            libEGL.dylib
+
