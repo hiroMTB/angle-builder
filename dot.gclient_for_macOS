@@ -66,7 +66,7 @@ solutions = [
         "angle/tools/perf": None,
         "angle/tools/protoc_wrapper": None,
         "angle/tools/python": None,
-        "angle/tools/rust": None,
+        #"angle/tools/rust": None,
         "angle/tools/valgrind": None,
     },
     "custom_vars": {},

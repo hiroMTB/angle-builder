@@ -24,15 +24,14 @@ jobs:
           echo "macOS version:"
           sw_vers
 
-  sync-angle:
-    name: setup depot_tools and sync ANGLE
+  setup-depot_tool:
+    name: setup depot_tools
     runs-on: macos-14
     needs: check-environmet
     steps:
         - name: Checkout repository
           uses: actions/checkout@v3
 
-        # chache depot_tools
         - name: Cache depot_tools
           uses: actions/cache@v3
           with:
@@ -40,47 +39,18 @@ jobs:
             key: depot-tools-cache-v1
             restore-keys: depot-tools-
 
-        # depot_tools PATH
         - name: Setup depot_tools
           run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
 
-        # chache /angle folder if no change in dot.gclient_for_macOS
-        - name: Cache ANGLE checkout
-          uses: actions/cache@v3
-          with:
-            path: angle
-            key: angle-cache-${{ hashFiles('dot.gclient_for_macOS') }}
-            restore-keys: angle-cache-
-  
-        # Rename dot.gclient_for_macOS to .gclient file
-        - name: Prepare .gclient file
-          run: mv dot.gclient_for_macOS .gclient
-
-        - name: Sync ANGLE repository
-          run: gclient sync
-
-        # Check commit hash and /angle folder 
-        - name: Check ANGLE repository
-          run: |
-            echo "ANGLE commit:"
-            git log -1 --oneline
-
-            echo "/angle"
-            ls -al angle
-
-            echo "/angle/third_party"
-            ls -al angle/third_party
-
-  build-arm64-debug:
+  build-debug-arm64:
     name: Build Debug arm64
     runs-on: macos-14
-    needs: sync-angle
+    needs: setup-depot_tool
 
     steps:
         - name: Checkout repository
           uses: actions/checkout@v3
 
-        # chache depot_tools
         - name: Cache depot_tools
           uses: actions/cache@v3
           with:
@@ -92,12 +62,20 @@ jobs:
         - name: Setup depot_tools
           run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
 
-        - name: Restore ANGLE from cache
+        # cache /angle folder if no change in dot.gclient_for_macOS
+        - name: Cache ANGLE checkout
           uses: actions/cache@v3
           with:
             path: angle
-            key: angle-cache-${{ hashFiles('dot.gclient_for_macOS') }}
-            restore-keys: angle-cache-
+            key: angle-cache-debug-arm64-${{ hashFiles('dot.gclient_for_macOS') }}
+            restore-keys: angle-cache-debug-arm64-
+  
+        # Rename dot.gclient_for_macOS to .gclient file
+        - name: Prepare .gclient file
+          run: mv dot.gclient_for_macOS .gclient
+
+        - name: Sync ANGLE repository
+          run: gclient sync
 
         - name: Generate Buid Files Debug arm64
           run: |
@@ -116,10 +94,10 @@ jobs:
             name: lib-debug-arm64
             path: angle/out/Debug/arm64/lib*.dylib
 
-  build-x64-debug:
+  build-debug-x64:
     name: Build Debug x64
     runs-on: macos-14
-    needs: sync-angle
+    needs: setup-depot_tool
 
     steps:
         - name: Checkout repository
@@ -135,12 +113,20 @@ jobs:
         - name: Setup depot_tools
           run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
 
-        - name: Restore ANGLE from cache
+        # cache /angle folder if no change in dot.gclient_for_macOS
+        - name: Cache ANGLE checkout
           uses: actions/cache@v3
           with:
             path: angle
-            key: angle-cache-${{ hashFiles('dot.gclient_for_macOS') }}
-            restore-keys: angle-cache-
+            key: angle-cache-debug-x64-${{ hashFiles('dot.gclient_for_macOS') }}
+            restore-keys: angle-cache-debug-x64-
+  
+        # Rename dot.gclient_for_macOS to .gclient file
+        - name: Prepare .gclient file
+          run: mv dot.gclient_for_macOS .gclient
+
+        - name: Sync ANGLE repository
+          run: gclient sync
 
         - name: Generate Buid Files Debug x64
           run: |
@@ -162,7 +148,7 @@ jobs:
   merge-debug:
     name: Merge Debug arm64 and x64 dylibs
     runs-on: macos-14
-    needs: [build-arm64-debug, build-x64-debug]
+    needs: [build-debug-arm64, build-debug-x64]
 
     steps:
       - name: Download arm64 dylibs
@@ -201,10 +187,10 @@ jobs:
   # Release
   #
 
-  build-arm64-release:
+  build-release-arm64:
     name: Build Release arm64
     runs-on: macos-14
-    needs: sync-angle
+    needs: setup-depot_tool
 
     steps:
         - name: Checkout repository
@@ -220,12 +206,20 @@ jobs:
         - name: Setup depot_tools
           run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
 
-        - name: Restore ANGLE from cache
+        # cache /angle folder if no change in dot.gclient_for_macOS
+        - name: Cache ANGLE checkout
           uses: actions/cache@v3
           with:
             path: angle
-            key: angle-cache-${{ hashFiles('dot.gclient_for_macOS') }}
-            restore-keys: angle-cache-
+            key: angle-cache-release-arm64-${{ hashFiles('dot.gclient_for_macOS') }}
+            restore-keys: angle-cache-release-arm64-
+  
+        # Rename dot.gclient_for_macOS to .gclient file
+        - name: Prepare .gclient file
+          run: mv dot.gclient_for_macOS .gclient
+
+        - name: Sync ANGLE repository
+          run: gclient sync
 
         - name: Generate Buid Files Release arm64
           run: |
@@ -244,10 +238,10 @@ jobs:
             name: lib-release-arm64
             path: angle/out/Release/arm64/lib*.dylib
 
-  build-x64-release:
+  build-release-x64:
     name: Build Release x64
     runs-on: macos-14
-    needs: sync-angle
+    needs: setup-depot_tool
 
     steps:
       - name: Checkout repository
@@ -263,12 +257,20 @@ jobs:
       - name: Setup depot_tools
         run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
 
-      - name: Restore ANGLE from cache
+      # cache /angle folder if no change in dot.gclient_for_macOS
+      - name: Cache ANGLE checkout
         uses: actions/cache@v3
         with:
           path: angle
-          key: angle-cache-${{ hashFiles('dot.gclient_for_macOS') }}
-          restore-keys: angle-cache-
+          key: angle-cache-release-x64-${{ hashFiles('dot.gclient_for_macOS') }}
+          restore-keys: angle-cache-release-x64-
+
+      # Rename dot.gclient_for_macOS to .gclient file
+      - name: Prepare .gclient file
+        run: mv dot.gclient_for_macOS .gclient
+
+      - name: Sync ANGLE repository
+        run: gclient sync
 
       - name: Generate Buid Files Release x64
         run: |
@@ -290,7 +292,7 @@ jobs:
   merge-release:
     name: Merge Release arm64 and x64 dylibs
     runs-on: macos-14
-    needs: [build-arm64-release, build-x64-release]
+    needs: [build-release-arm64, build-release-x64]
 
     steps:
       - name: Download arm64 dylibs
