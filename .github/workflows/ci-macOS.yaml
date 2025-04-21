@@ -85,7 +85,7 @@ jobs:
           run: mv dot.gclient_for_macOS .gclient
 
         - name: Sync ANGLE repository
-          run: gclient sync
+          run: gclient sync --no-history
 
         - name: Generate Buid Files Debug arm64
           run: |
@@ -136,7 +136,7 @@ jobs:
           run: mv dot.gclient_for_macOS .gclient
 
         - name: Sync ANGLE repository
-          run: gclient sync
+          run: gclient sync --no-history
 
         - name: Generate Buid Files Debug x64
           run: |
@@ -229,7 +229,7 @@ jobs:
           run: mv dot.gclient_for_macOS .gclient
 
         - name: Sync ANGLE repository
-          run: gclient sync
+          run: gclient sync --no-history
 
         - name: Generate Buid Files Release arm64
           run: |
@@ -280,7 +280,7 @@ jobs:
         run: mv dot.gclient_for_macOS .gclient
 
       - name: Sync ANGLE repository
-        run: gclient sync
+        run: gclient sync --no-history
 
       - name: Generate Buid Files Release x64
         run: |
