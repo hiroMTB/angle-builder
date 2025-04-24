@@ -6,16 +6,12 @@
 
 - dylibs are available in Release page
 
+- You can either download `dylibs` or build your locally self. 
 
+# Download and Link
 ## macOS
 
-- `dot.gclient_for_macOS` for `gclient sync` configuration(specify commit and select submodules to pull)
-
-- Universal dylibs (arm64 and x64)
-
-- Not codesigned, Not notalized
-
-- Please run `install_name_tool` before linking. it depends on your usage, but the most standard way is below.
+- download libraries and  run `install_name_tool` before linking. Depending on your usage, but the most standard way is below.
 
 ```bash
 install_name_tool -id @rpath/libEGL.dylib your/path/to/libEGL.dylib
@@ -26,3 +22,7 @@ install_name_tool -id @rpath/libGLESv2.dylib your/path/to/libGLESv2.dylib
 ## Windows 11
 
 - comming soon
+
+
+# Build locally 
+see [Local Build Guide](./mac-local-build-guide.md)
