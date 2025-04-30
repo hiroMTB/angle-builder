@@ -78,7 +78,7 @@ jobs:
           with:
             path: angle
             key: angle-cache-debug-arm64-${{ hashFiles('dot.gclient_for_macOS') }}
-            restore-keys: angle-cache-debug-arm64-
+            restore-keys: ""
   
         # Rename dot.gclient_for_macOS to .gclient file
         - name: Prepare .gclient file
@@ -129,7 +129,7 @@ jobs:
           with:
             path: angle
             key: angle-cache-debug-x64-${{ hashFiles('dot.gclient_for_macOS') }}
-            restore-keys: angle-cache-debug-x64-
+            restore-keys: ""
   
         # Rename dot.gclient_for_macOS to .gclient file
         - name: Prepare .gclient file
@@ -222,7 +222,7 @@ jobs:
           with:
             path: angle
             key: angle-cache-release-arm64-${{ hashFiles('dot.gclient_for_macOS') }}
-            restore-keys: angle-cache-release-arm64-
+            restore-keys: ""
   
         # Rename dot.gclient_for_macOS to .gclient file
         - name: Prepare .gclient file
@@ -273,7 +273,7 @@ jobs:
         with:
           path: angle
           key: angle-cache-release-x64-${{ hashFiles('dot.gclient_for_macOS') }}
-          restore-keys: angle-cache-release-x64-
+          restore-keys: ""
 
       # Rename dot.gclient_for_macOS to .gclient file
       - name: Prepare .gclient file
@@ -371,9 +371,16 @@ jobs:
         uses: actions/cache@v3
         with:
           path: angle-src
-          key: angle-cache-release-arm64-${{ hashFiles('dot.gclient_for_macOS') }}
-          restore-keys: angle-cache-release-arm64-
+          key: angle-cache-include-folder-${{ hashFiles('dot.gclient_for_macOS') }}
+          restore-keys: ""
 
+      # Rename dot.gclient_for_macOS to .gclient file
+      - name: Prepare .gclient file
+        run: mv dot.gclient_for_macOS .gclient
+
+      - name: Sync ANGLE repository
+        run: gclient sync --no-history
+        
       - name: Assemble release folder
         run: |
           mkdir -p angle/out/Debug
