@@ -367,6 +367,9 @@ jobs:
           echo "hash=$hash"
           echo "hash=$hash" >> $GITHUB_OUTPUT
 
+      - name: Zip ANGLE include directory
+        run: zip -r include.zip angle/include
+
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
@@ -374,6 +377,7 @@ jobs:
           body: |
             🔨 Built from ANGLE commit: [`${{ steps.angle.outputs.hash }}`](https://github.com/google/angle/commits/${{ steps.angle.outputs.hash }})      
           artifacts: |
+            include.zip
             angle/libEGL.dylib
             angle/libGLESv2.dylib
             angle/libEGL-debug.dylib
