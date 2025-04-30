@@ -349,23 +349,30 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: lib-debug-universal
-          path: angle
+          path: angle-bin
 
       - name: Download Release build artifacts
         uses: actions/download-artifact@v4
         with:
           name: lib-release-universal
-          path: angle
+          path: angle-bin
 
       - name: List all .dylib files with full paths
         run: find . -name '*.dylib' -exec ls -lh {} \;
 
       - name: Extract ANGLE commit hash from .gclient file
-        id: angle
         run: |
           hash=$(grep '"revision":' dot.gclient_for_macOS | sed -E 's/.*"revision": *"([a-f0-9]{40})".*/\1/')
           echo "hash=$hash"
           echo "hash=$hash" >> $GITHUB_OUTPUT
+
+      # cache /angle folder if no change in dot.gclient_for_macOS
+      - name: Cache ANGLE checkout
+        uses: actions/cache@v3
+        with:
+          path: angle
+          key: angle-cache-release-arm64-${{ hashFiles('dot.gclient_for_macOS') }}
+          restore-keys: angle-cache-release-arm64-
 
       - name: Zip ANGLE include directory
         run: zip -r include.zip angle/include
@@ -378,8 +385,8 @@ jobs:
             🔨 Built from ANGLE commit: [`${{ steps.angle.outputs.hash }}`](https://github.com/google/angle/commits/${{ steps.angle.outputs.hash }})      
           artifacts: |
             include.zip
-            angle/libEGL.dylib
-            angle/libGLESv2.dylib
-            angle/libEGL-debug.dylib
-            angle/libGLESv2-debug.dylib
+            angle-bin/libEGL.dylib
+            angle-bin/libGLESv2.dylib
+            angle-bin/libEGL-debug.dylib
+            angle-bin/libGLESv2-debug.dylib
             dot.gclient_for_macOS
