@@ -352,6 +352,9 @@ jobs:
           key: depot-tools-cache-v1
           restore-keys: depot-tools-
 
+      - name: Setup depot_tools
+        run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
+
       - name: Download Debug build artifacts
         uses: actions/download-artifact@v4
         with:
