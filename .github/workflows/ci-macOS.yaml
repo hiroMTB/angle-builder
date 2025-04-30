@@ -345,6 +345,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Cache depot_tools
+        uses: actions/cache@v3
+        with:
+          path: "depot_tools"
+          key: depot-tools-cache-v1
+          restore-keys: depot-tools-
+
       - name: Download Debug build artifacts
         uses: actions/download-artifact@v4
         with:
