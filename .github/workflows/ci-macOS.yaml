@@ -370,12 +370,24 @@ jobs:
       - name: Cache ANGLE checkout
         uses: actions/cache@v3
         with:
-          path: angle
+          path: angle-src
           key: angle-cache-release-arm64-${{ hashFiles('dot.gclient_for_macOS') }}
           restore-keys: angle-cache-release-arm64-
 
+      - name: Assemble release folder
+        run: |
+          mkdir -p angle/out/Debug
+          mkdir -p angle/out/Release
+
+          cp -R angle-src/include angle/include
+          cp angle-bin/libEGL-debug.dylib angle/out/Debug/
+          cp angle-bin/libGLESv2-debug.dylib angle/out/Debug/
+          cp angle-bin/libEGL.dylib angle/out/Release/
+          cp angle-bin/libGLESv2.dylib angle/out/Release/
+          cp dot.gclient_for_macOS angle/
+
       - name: Zip ANGLE include directory
-        run: zip -r include.zip angle/include
+        run: zip -r angle.zip angle
 
       - name: Create Release
         uses: ncipollo/release-action@v1
@@ -384,9 +396,5 @@ jobs:
           body: |
             🔨 Built from ANGLE commit: [`${{ steps.angle.outputs.hash }}`](https://github.com/google/angle/commits/${{ steps.angle.outputs.hash }})      
           artifacts: |
-            include.zip
-            angle-bin/libEGL.dylib
-            angle-bin/libGLESv2.dylib
-            angle-bin/libEGL-debug.dylib
-            angle-bin/libGLESv2-debug.dylib
+            angle.zip
             dot.gclient_for_macOS
