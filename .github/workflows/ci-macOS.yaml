@@ -49,6 +49,15 @@ jobs:
             key: depot-tools-cache-v1
             restore-keys: depot-tools-
 
+        - name: Ensure depot_tools is available
+          run: |
+            if [ ! -d depot_tools/.git ]; then
+              echo "No depot_tools in cache, cloning..."
+              git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git depot_tools
+            else
+              echo "Using depot_tools from cache."
+            fi
+
         - name: Setup depot_tools
           run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
 
