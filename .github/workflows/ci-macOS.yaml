@@ -410,7 +410,7 @@ jobs:
           cp angle-bin/libGLESv2-debug.dylib angle-macOS/angle/out/Debug/
           cp angle-bin/libEGL.dylib angle-macOS/angle/out/Release/
           cp angle-bin/libGLESv2.dylib angle-macOS/angle/out/Release/
-          cp dot.gclient_for_macOS angle-macOS/angle/
+          cp .gclient angle-macOS/angle/
 
       - name: Zip ANGLE include directory
         run: |
