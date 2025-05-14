@@ -187,20 +187,20 @@ jobs:
           lipo -create \
             arm64/libGLESv2.dylib \
             x64/libGLESv2.dylib \
-            -output libGLESv2-debug.dylib
+            -output libGLESv2.dylib
 
           lipo -create \
             arm64/libEGL.dylib \
             x64/libEGL.dylib \
-            -output libEGL-debug.dylib
+            -output libEGL.dylib
 
       - name: Upload merged universal dylibs
         uses: actions/upload-artifact@v4
         with:
           name: lib-debug-universal
           path: |
-            libGLESv2-debug.dylib
-            libEGL-debug.dylib
+            libGLESv2.dylib
+            libEGL.dylib
 
   #
   # Release
@@ -406,8 +406,8 @@ jobs:
           mkdir -p angle-macOS/angle/out/Release
 
           cp -R angle/include angle-macOS/angle/include
-          cp angle-bin/libEGL-debug.dylib angle-macOS/angle/out/Debug/
-          cp angle-bin/libGLESv2-debug.dylib angle-macOS/angle/out/Debug/
+          cp angle-bin/libEGL.dylib angle-macOS/angle/out/Debug/
+          cp angle-bin/libGLESv2.dylib angle-macOS/angle/out/Debug/
           cp angle-bin/libEGL.dylib angle-macOS/angle/out/Release/
           cp angle-bin/libGLESv2.dylib angle-macOS/angle/out/Release/
           cp .gclient angle-macOS/angle/
