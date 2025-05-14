@@ -17,6 +17,13 @@ Follow 1 ~ 6 below.
 ### Installation
 Refer to [Google's official documentation](https://commondatastorage.googleapis.com/chrome-infra-docs/flat/depot_tools/docs/html/depot_tools_tutorial.html#_setting_up)
 
+- After the installation, please execute the following commands.
+
+```bash
+gclient
+gclient --version  #check if insllation is successful
+```
+
 ### 🛠 Key Tools Overview
 
 - **`fetch`** – Clones the repo and sets up dependencies.
