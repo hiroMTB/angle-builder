@@ -39,7 +39,7 @@ build() {
   local config=$1
   local arch=$2
   local libType=$3
-  local args="$COMMON_ARGS target_cpu=\"$arch\""
+  local args="$COMMON_ARGS target_cpu=\"$arch\" mac_sdk_min=\"14\""
 
   if [ "$config" == "Debug" ]; then
     args="$args is_debug=true"
