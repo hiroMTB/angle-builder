@@ -5,9 +5,9 @@ permissions:
 
 on:
   push:
-    branches:
-      - main
-      - develop
+    # branches:
+    #   - main
+    #   - develop
     tags:
       - 'v*'
   pull_request:
