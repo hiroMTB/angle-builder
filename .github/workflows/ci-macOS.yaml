@@ -364,6 +364,7 @@ jobs:
         run: find . -name '*.dylib' -exec ls -lh {} \;
 
       - name: Extract ANGLE commit hash from .gclient file
+        id: angle
         run: |
           hash=$(grep '"revision":' .gclient | sed -E 's/.*"revision": *"([a-f0-9]{40})".*/\1/')
           echo "hash=$hash"
