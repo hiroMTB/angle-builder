@@ -1,5 +1,7 @@
 #!/bin/bash
 
+gclient sync --no-history
+
 cd angle
 
 # on macOS, make sure angle_enable_gl=false, otherwise ANGLE won't use Metal
