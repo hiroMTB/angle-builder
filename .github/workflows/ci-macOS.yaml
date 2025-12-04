@@ -81,18 +81,14 @@ jobs:
         - name: Setup depot_tools
           run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
 
-        # cache /angle folder if no change in dot.gclient_for_macOS
+        # cache /angle folder if no change in .gclient
         - name: Cache ANGLE checkout
           uses: actions/cache@v3
           with:
             path: angle
-            key: angle-cache-debug-arm64-${{ hashFiles('dot.gclient_for_macOS') }}
+            key: angle-cache-debug-arm64-${{ hashFiles('.gclient') }}
             restore-keys: ""
   
-        # Rename dot.gclient_for_macOS to .gclient file
-        - name: Prepare .gclient file
-          run: mv dot.gclient_for_macOS .gclient
-
         - name: Sync ANGLE repository
           run: gclient sync --no-history
 
@@ -132,18 +128,14 @@ jobs:
         - name: Setup depot_tools
           run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
 
-        # cache /angle folder if no change in dot.gclient_for_macOS
+        # cache /angle folder if no change in .gclient
         - name: Cache ANGLE checkout
           uses: actions/cache@v3
           with:
             path: angle
-            key: angle-cache-debug-x64-${{ hashFiles('dot.gclient_for_macOS') }}
+            key: angle-cache-debug-x64-${{ hashFiles('.gclient') }}
             restore-keys: ""
   
-        # Rename dot.gclient_for_macOS to .gclient file
-        - name: Prepare .gclient file
-          run: mv dot.gclient_for_macOS .gclient
-
         - name: Sync ANGLE repository
           run: gclient sync --no-history
 
@@ -225,18 +217,14 @@ jobs:
         - name: Setup depot_tools
           run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
 
-        # cache /angle folder if no change in dot.gclient_for_macOS
+        # cache /angle folder if no change in .gclient
         - name: Cache ANGLE checkout
           uses: actions/cache@v3
           with:
             path: angle
-            key: angle-cache-release-arm64-${{ hashFiles('dot.gclient_for_macOS') }}
+            key: angle-cache-release-arm64-${{ hashFiles('.gclient') }}
             restore-keys: ""
   
-        # Rename dot.gclient_for_macOS to .gclient file
-        - name: Prepare .gclient file
-          run: mv dot.gclient_for_macOS .gclient
-
         - name: Sync ANGLE repository
           run: gclient sync --no-history
 
@@ -276,17 +264,13 @@ jobs:
       - name: Setup depot_tools
         run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
 
-      # cache /angle folder if no change in dot.gclient_for_macOS
+      # cache /angle folder if no change in .gclient
       - name: Cache ANGLE checkout
         uses: actions/cache@v3
         with:
           path: angle
-          key: angle-cache-release-x64-${{ hashFiles('dot.gclient_for_macOS') }}
+          key: angle-cache-release-x64-${{ hashFiles('.gclient') }}
           restore-keys: ""
-
-      # Rename dot.gclient_for_macOS to .gclient file
-      - name: Prepare .gclient file
-        run: mv dot.gclient_for_macOS .gclient
 
       - name: Sync ANGLE repository
         run: gclient sync --no-history
@@ -368,34 +352,30 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: lib-debug-universal
-          path: angle-bin
+          path: angle-bin/debug
 
       - name: Download Release build artifacts
         uses: actions/download-artifact@v4
         with:
           name: lib-release-universal
-          path: angle-bin
+          path: angle-bin/release
 
       - name: List all .dylib files with full paths
         run: find . -name '*.dylib' -exec ls -lh {} \;
 
       - name: Extract ANGLE commit hash from .gclient file
         run: |
-          hash=$(grep '"revision":' dot.gclient_for_macOS | sed -E 's/.*"revision": *"([a-f0-9]{40})".*/\1/')
+          hash=$(grep '"revision":' .gclient | sed -E 's/.*"revision": *"([a-f0-9]{40})".*/\1/')
           echo "hash=$hash"
           echo "hash=$hash" >> $GITHUB_OUTPUT
 
-      # cache /angle folder if no change in dot.gclient_for_macOS
+      # cache /angle folder if no change in .gclient
       - name: Cache ANGLE checkout
         uses: actions/cache@v3
         with:
           path: angle
-          key: angle-cache-include-folder-${{ hashFiles('dot.gclient_for_macOS') }}
+          key: angle-cache-include-folder-${{ hashFiles('.gclient') }}
           restore-keys: ""
-
-      # Rename dot.gclient_for_macOS to .gclient file
-      - name: Prepare .gclient file
-        run: mv dot.gclient_for_macOS .gclient
 
       - name: Sync ANGLE repository
         run: gclient sync --no-history
@@ -406,10 +386,10 @@ jobs:
           mkdir -p angle-macOS/angle/out/Release
 
           cp -R angle/include angle-macOS/angle/include
-          cp angle-bin/libEGL.dylib angle-macOS/angle/out/Debug/
-          cp angle-bin/libGLESv2.dylib angle-macOS/angle/out/Debug/
-          cp angle-bin/libEGL.dylib angle-macOS/angle/out/Release/
-          cp angle-bin/libGLESv2.dylib angle-macOS/angle/out/Release/
+          cp angle-bin/debug/libEGL.dylib angle-macOS/angle/out/Debug/
+          cp angle-bin/debug/libGLESv2.dylib angle-macOS/angle/out/Debug/
+          cp angle-bin/release/libEGL.dylib angle-macOS/angle/out/Release/
+          cp angle-bin/release/libGLESv2.dylib angle-macOS/angle/out/Release/
           cp .gclient angle-macOS/angle/
 
       - name: Zip ANGLE include directory
