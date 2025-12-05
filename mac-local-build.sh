@@ -26,6 +26,7 @@ build_with_chromium=false
 angle_enable_d3d9=false
 angle_enable_d3d11=false
 angle_enable_gl=false
+angle_enable_null=false
 angle_enable_metal=true
 angle_enable_vulkan=true
 angle_build_vulkan_system_info=true
