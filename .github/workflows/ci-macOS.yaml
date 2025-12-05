@@ -5,6 +5,7 @@ permissions:
 
 env:
   ANGLE_REVISION: "78f1066e993d4305482e3a306747157cb7368d71"
+
 on:
   push:
     # branches:
@@ -365,13 +366,6 @@ jobs:
       - name: List all .dylib files with full paths
         run: find . -name '*.dylib' -exec ls -lh {} \;
 
-      - name: Extract ANGLE commit hash from .gclient file
-        id: angle
-        run: |
-          hash=$(grep '"revision":' .gclient | sed -E 's/.*"revision": *"([a-f0-9]{40})".*/\1/')
-          echo "hash=$hash"
-          echo "hash=$hash" >> $GITHUB_OUTPUT
-
       # cache /angle folder if no change in .gclient
       - name: Cache ANGLE checkout
         uses: actions/cache@v3
@@ -406,6 +400,6 @@ jobs:
         with:
           name: "ANGLE library for macOS ${{github.ref_name}}"
           body: |
-            🔨 Built from ANGLE commit: [`${{ steps.angle.outputs.hash }}`](https://github.com/google/angle/commits/${{ steps.angle.outputs.hash }})      
+            🔨 Built from ANGLE commit: [`${{ ANGLE_REVISION }}`](https://github.com/google/angle/commits/${{ ANGLE_REVISION }})      
           artifacts: |
             angle.zip
