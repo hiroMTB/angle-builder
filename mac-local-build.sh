@@ -1,10 +1,20 @@
 #!/bin/bash
 
-gclient sync --no-history
+# Fetch sorce code, try to get only required files to reduce download size and time
+
+# This is full commit hash of ANGLE repository
+
+# Doesn't work, 2025.12.02
+#REVISION=2f231d573555fd5789f65c4285a6773f61d87281
+
+# Works, 2025.12.01
+REVISION=78f1066e993d4305482e3a306747157cb7368d71
+
+echo "Fetching ANGLE source code..., revision $REVISION"
+gclient sync --no-history --shallow -D --revision $REVISION
+
 
 cd angle
-
-# on macOS, make sure angle_enable_gl=false, otherwise ANGLE won't use Metal
 
 # Common GN args, some args are already false by default
 # use `gn args out/Debug/arm64 --list` to see all args with explanations and default values
