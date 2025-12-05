@@ -3,6 +3,8 @@ name: Build ANGLE macOS Universal
 permissions:
   contents: write
 
+env:
+  ANGLE_REVISION: "78f1066e993d4305482e3a306747157cb7368d71"
 on:
   push:
     # branches:
@@ -137,7 +139,7 @@ jobs:
             restore-keys: ""
   
         - name: Sync ANGLE repository
-          run: gclient sync --no-history
+          run: gclient sync --no-history --shallow -D --revision "${ANGLE_REVISION}"
 
         - name: Generate Buid Files Debug x64
           run: |
@@ -226,7 +228,7 @@ jobs:
             restore-keys: ""
   
         - name: Sync ANGLE repository
-          run: gclient sync --no-history
+          run: gclient sync --no-history --shallow -D --revision "${ANGLE_REVISION}"
 
         - name: Generate Buid Files Release arm64
           run: |
@@ -273,7 +275,7 @@ jobs:
           restore-keys: ""
 
       - name: Sync ANGLE repository
-        run: gclient sync --no-history
+        run: gclient sync --no-history --shallow -D --revision "${ANGLE_REVISION}"
 
       - name: Generate Buid Files Release x64
         run: |
@@ -379,8 +381,8 @@ jobs:
           restore-keys: ""
 
       - name: Sync ANGLE repository
-        run: gclient sync --no-history
-        
+        run: gclient sync --no-history --shallow -D --revision "${ANGLE_REVISION}"
+
       - name: Assemble release folder
         run: |
           mkdir -p angle-macOS/angle/out/Debug
