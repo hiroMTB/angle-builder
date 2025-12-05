@@ -4,7 +4,6 @@ solutions = [
     "url": "https://chromium.googlesource.com/angle/angle.git",
     "deps_file": "DEPS",
     "managed": False,
-    "revision": "04222c1b36e22f2e1fe1a9a9b25520e5d44f2601",
     "custom_deps": {
         #"angle/testing": None,
         "angle/third_party/android_tools": None,
