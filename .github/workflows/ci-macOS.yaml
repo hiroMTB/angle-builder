@@ -140,7 +140,7 @@ jobs:
             restore-keys: ""
   
         - name: Sync ANGLE repository
-          run: gclient sync --no-history --shallow -D --revision "${ANGLE_REVISION}"
+          run: gclient sync --no-history --shallow -D --revision "${env.ANGLE_REVISION}"
 
         - name: Generate Buid Files Debug x64
           run: |
@@ -229,7 +229,7 @@ jobs:
             restore-keys: ""
   
         - name: Sync ANGLE repository
-          run: gclient sync --no-history --shallow -D --revision "${ANGLE_REVISION}"
+          run: gclient sync --no-history --shallow -D --revision "${env.ANGLE_REVISION}"
 
         - name: Generate Buid Files Release arm64
           run: |
@@ -276,7 +276,7 @@ jobs:
           restore-keys: ""
 
       - name: Sync ANGLE repository
-        run: gclient sync --no-history --shallow -D --revision "${ANGLE_REVISION}"
+        run: gclient sync --no-history --shallow -D --revision "${env.ANGLE_REVISION}"
 
       - name: Generate Buid Files Release x64
         run: |
@@ -375,7 +375,7 @@ jobs:
           restore-keys: ""
 
       - name: Sync ANGLE repository
-        run: gclient sync --no-history --shallow -D --revision "${ANGLE_REVISION}"
+        run: gclient sync --no-history --shallow -D --revision "${env.ANGLE_REVISION}"
 
       - name: Assemble release folder
         run: |
@@ -400,6 +400,6 @@ jobs:
         with:
           name: "ANGLE library for macOS ${{github.ref_name}}"
           body: |
-            🔨 Built from ANGLE commit: [`${{ ANGLE_REVISION }}`](https://github.com/google/angle/commits/${{ ANGLE_REVISION }})      
+            🔨 Built from ANGLE commit: [`${{ env.ANGLE_REVISION }}`](https://github.com/google/angle/commits/${{ env.ANGLE_REVISION }})      
           artifacts: |
             angle.zip
