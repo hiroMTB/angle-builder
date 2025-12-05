@@ -138,3 +138,21 @@ install_name_tool -id @rpath/libEGL.dylib ./out/Debug/libEGL.dylib
 install_name_tool -id @rpath/libGLESv2.dylib ./out/Debug/libGLESv2.dylib
 
 echo 'Suscess building ANGLE'
+
+
+# echo 'Create package'
+
+# rm -rf ../package/angle
+# mkdir -p ../package/angle/out/Debug
+# mkdir -p ../package/angle/out/Release
+# cp ./out/Debug/libEGL.dylib ../package/angle/out/Debug/libEGL.dylib
+# cp ./out/Debug/libGLESv2.dylib ../package/angle/out/Debug/libGLESv2.dylib
+# cp ./out/Release/libEGL.dylib ../package/angle/out/Release/libEGL.dylib
+# cp ./out/Release/libGLESv2.dylib ../package/angle/out/Release/libGLESv2.dylib
+
+# cp -R ./include ../package/angle/include
+
+# echo 'Move package to Isadora repo'
+
+# rm -rf ../../isadora/angle
+# cp -R ../package/angle ../../isadora/angle
