@@ -17,7 +17,6 @@ solutions = [
         "angle/third_party/vulkan-validation-layers/src": None,
         "angle/third_party/vulkan-utility-libraries/src": None,
         "angle/third_party/VK-GL-CTS/src": None,
-        #"angle/third_party/vulkan-tools/src": None,
         "angle/third_party/lunarg-vulkantools/src": None,
         "angle/third_party/libpng/src": None,
         "angle/third_party/libjpeg_turbo": None,
@@ -73,4 +72,4 @@ solutions = [
 ]
 
 target_os = ['mac']
-target_cpu = ['arm64']  # or 'x64'
+target_cpu = ['arm64','x64']
