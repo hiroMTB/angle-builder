@@ -355,6 +355,7 @@ jobs:
 
       - name: Assemble release folder
         run: |
+          TAG=${{ github.ref_name }}
           mkdir -p angle-macOS/angle/lib/Debug
           mkdir -p angle-macOS/angle/lib/Release
 
@@ -363,13 +364,13 @@ jobs:
           cp angle-bin/debug/libGLESv2.dylib angle-macOS/angle/lib/Debug/
           cp angle-bin/release/libEGL.dylib angle-macOS/angle/lib/Release/
           cp angle-bin/release/libGLESv2.dylib angle-macOS/angle/lib/Release/
-          cp .gclient angle-macOS/angle/
 
       - name: Zip ANGLE include directory
         run: |
           TAG=${{ github.ref_name }}
           rm -rf angle
-          zip -r angle_${TAG}.zip angle-macOS
+          mv angle-macOS angle_${TAG}
+          zip -r angle_${TAG}.zip angle_${TAG}
 
       - name: Create Release
         uses: ncipollo/release-action@v1
