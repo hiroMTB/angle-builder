@@ -341,6 +341,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Cache depot_tools
+        uses: actions/cache@v3
+        with:
+          path: "depot_tools"
+          key: depot-tools-cache-v1
+          restore-keys: depot-tools-
+
+      - name: Setup depot_tools
+        run: echo "PATH=$PWD/depot_tools:$PATH" >> $GITHUB_ENV
+
       - name: Download Debug build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -352,6 +362,20 @@ jobs:
         with:
           name: lib-release-universal
           path: angle-bin/release
+
+      - name: List all .dylib files with full paths
+        run: find . -name '*.dylib' -exec ls -lh {} \;
+
+      # cache /angle folder if no change in .gclient
+      - name: Cache ANGLE checkout
+        uses: actions/cache@v3
+        with:
+          path: angle
+          key: angle-cache-include-folder-${{ hashFiles('.gclient') }}
+          restore-keys: ""
+
+      - name: Sync ANGLE repository
+        run: gclient sync --no-history --shallow -D --revision "${ANGLE_REVISION}"
 
       - name: Assemble release folder
         run: |
