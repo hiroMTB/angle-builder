@@ -379,21 +379,21 @@ jobs:
 
       - name: Assemble release folder
         run: |
-          mkdir -p angle-macOS/angle/out/Debug
-          mkdir -p angle-macOS/angle/out/Release
+          mkdir -p angle-macOS/angle/lib/Debug
+          mkdir -p angle-macOS/angle/lib/Release
 
           cp -R angle/include angle-macOS/angle/include
-          cp angle-bin/debug/libEGL.dylib angle-macOS/angle/out/Debug/
-          cp angle-bin/debug/libGLESv2.dylib angle-macOS/angle/out/Debug/
-          cp angle-bin/release/libEGL.dylib angle-macOS/angle/out/Release/
-          cp angle-bin/release/libGLESv2.dylib angle-macOS/angle/out/Release/
+          cp angle-bin/debug/libEGL.dylib angle-macOS/angle/lib/Debug/
+          cp angle-bin/debug/libGLESv2.dylib angle-macOS/angle/lib/Debug/
+          cp angle-bin/release/libEGL.dylib angle-macOS/angle/lib/Release/
+          cp angle-bin/release/libGLESv2.dylib angle-macOS/angle/lib/Release/
           cp .gclient angle-macOS/angle/
 
       - name: Zip ANGLE include directory
         run: |
+          TAG=${{ github.ref_name }}
           rm -rf angle
-          mv angle-macOS angle
-          zip -r angle.zip angle
+          zip -r angle_${TAG}.zip angle-macOS
 
       - name: Create Release
         uses: ncipollo/release-action@v1
@@ -402,4 +402,4 @@ jobs:
           body: |
             🔨 Built from ANGLE commit: [`${{ env.ANGLE_REVISION }}`](https://github.com/google/angle/commits/${{ env.ANGLE_REVISION }})      
           artifacts: |
-            angle.zip
+            angle_${{ github.ref_name }}.zip
