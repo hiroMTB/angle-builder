@@ -388,7 +388,8 @@ jobs:
           cp angle-bin/debug/libGLESv2.dylib angle-macOS/angle/lib/Debug/
           cp angle-bin/release/libEGL.dylib angle-macOS/angle/lib/Release/
           cp angle-bin/release/libGLESv2.dylib angle-macOS/angle/lib/Release/
-
+          cp .gclient angle-macOS/angle/
+          
       - name: Zip ANGLE include directory
         run: |
           TAG=${{ github.ref_name }}
