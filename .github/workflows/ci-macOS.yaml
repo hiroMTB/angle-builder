@@ -189,6 +189,11 @@ jobs:
             x64/libEGL.dylib \
             -output libEGL.dylib
 
+      - name: Fix install names to use @rpath
+        run: |
+          install_name_tool -id @rpath/libEGL.dylib libEGL.dylib
+          install_name_tool -id @rpath/libGLESv2.dylib libGLESv2.dylib
+
       - name: Upload merged universal dylibs
         uses: actions/upload-artifact@v4
         with:
@@ -324,6 +329,11 @@ jobs:
             release-arm64/libEGL.dylib \
             release-x64/libEGL.dylib \
             -output libEGL.dylib
+
+      - name: Fix install names to use @rpath
+        run: |
+          install_name_tool -id @rpath/libEGL.dylib libEGL.dylib
+          install_name_tool -id @rpath/libGLESv2.dylib libGLESv2.dylib
 
       - name: Upload merged universal dylibs
         uses: actions/upload-artifact@v4
