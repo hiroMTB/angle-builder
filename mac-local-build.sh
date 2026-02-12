@@ -136,6 +136,8 @@ merge Release dylib
 # current install_name of dylib is ./libEGL.dylib, need to change it to @rpath/libEGL.dylib
 install_name_tool -id @rpath/libEGL.dylib ./out/Debug/libEGL.dylib
 install_name_tool -id @rpath/libGLESv2.dylib ./out/Debug/libGLESv2.dylib
+install_name_tool -id @rpath/libEGL.dylib ./out/Release/libEGL.dylib
+install_name_tool -id @rpath/libGLESv2.dylib ./out/Release/libGLESv2.dylib
 
 echo 'Suscess building ANGLE'
 
