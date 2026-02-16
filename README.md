@@ -6,7 +6,7 @@
 
 - dylibs are available in Release page
 
-- You can either download `dylibs` or build your locally self. 
+- You can either download `dylibs` or build locally. 
 
 # Download and Link
 ## macOS
