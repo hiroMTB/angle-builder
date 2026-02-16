@@ -16,6 +16,9 @@ gclient sync --no-history --shallow -D --revision $REVISION
 
 cd angle
 
+# Apply all patches for Isadora customization, find details in each patch file
+git am ../patches/*.patch
+
 # Common GN args, some args are already false by default
 # use `gn args out/Debug/arm64 --list` to see all args with explanations and default values
 COMMON_ARGS='
