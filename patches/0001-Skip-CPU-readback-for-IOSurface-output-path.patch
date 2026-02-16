@@ -18,7 +18,7 @@ index 42515c8c6e..28640733fd 100644
      }
  
 +#define SKIP_CPU_READBACK
-+#if SKIP_CPU_READBACK
++#ifdef SKIP_CPU_READBACK
 +     return egl::NoError();
 +#else
      gl::Rectangle bounds(0, 0, mWidth, mHeight);
