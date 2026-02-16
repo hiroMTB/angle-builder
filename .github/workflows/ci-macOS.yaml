@@ -95,6 +95,11 @@ jobs:
         - name: Sync ANGLE repository
           run: gclient sync --no-history --shallow -D --revision "${ANGLE_REVISION}"
 
+        - name: Apply patches
+          run: |
+            cd angle
+            git am ../patches/*.patch
+
         - name: Generate Buid Files Debug arm64
           run: |
             cd angle
@@ -141,6 +146,11 @@ jobs:
   
         - name: Sync ANGLE repository
           run: gclient sync --no-history --shallow -D --revision "${ANGLE_REVISION}"
+
+        - name: Apply patches
+          run: |
+            cd angle
+            git am ../patches/*.patch
 
         - name: Generate Buid Files Debug x64
           run: |
@@ -236,6 +246,11 @@ jobs:
         - name: Sync ANGLE repository
           run: gclient sync --no-history --shallow -D --revision "${ANGLE_REVISION}"
 
+        - name: Apply patches
+          run: |
+            cd angle
+            git am ../patches/*.patch
+
         - name: Generate Buid Files Release arm64
           run: |
             cd angle
@@ -282,6 +297,11 @@ jobs:
 
       - name: Sync ANGLE repository
         run: gclient sync --no-history --shallow -D --revision "${ANGLE_REVISION}"
+
+      - name: Apply patches
+        run: |
+          cd angle
+          git am ../patches/*.patch
 
       - name: Generate Buid Files Release x64
         run: |
