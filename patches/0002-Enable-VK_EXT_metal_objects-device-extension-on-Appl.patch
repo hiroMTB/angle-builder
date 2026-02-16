@@ -1,0 +1,44 @@
+From 92a8aa14b9294d63bc12e5a49947c9007af7be10 Mon Sep 17 00:00:00 2001
+From: Hiroshi Matoba <matobahiroshi@gmail.com>
+Date: Mon, 16 Feb 2026 16:35:06 +0100
+Subject: [PATCH 2/2] Enable VK_EXT_metal_objects device extension on Apple
+ platforms
+
+Required for extracting MTLTexture from VkImage (via MoltenVK's
+vkExportMetalObjectsEXT) to publish frames to Syphon clients
+without CPU readback.
+---
+ src/libANGLE/renderer/vulkan/vk_renderer.cpp | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/src/libANGLE/renderer/vulkan/vk_renderer.cpp b/src/libANGLE/renderer/vulkan/vk_renderer.cpp
+index ea092eb715..87dae93ac1 100644
+--- a/src/libANGLE/renderer/vulkan/vk_renderer.cpp
++++ b/src/libANGLE/renderer/vulkan/vk_renderer.cpp
+@@ -42,6 +42,9 @@
+ #include "libANGLE/trace.h"
+ #include "platform/PlatformMethods.h"
+ #include "vulkan/vulkan_core.h"
++#if defined(ANGLE_PLATFORM_APPLE)
++#    include "vulkan/vulkan_metal.h"
++#endif
+ 
+ // Consts
+ namespace
+@@ -3945,6 +3948,13 @@ void Renderer::enableDeviceExtensionsNotPromoted(const vk::ExtensionNameList &de
+         mEnabledDeviceExtensions.push_back(VK_EXT_GLOBAL_PRIORITY_QUERY_EXTENSION_NAME);
+         vk::AddToPNextChain(&mEnabledFeatures, &mPhysicalDeviceGlobalPriorityQueryFeatures);
+     }
++
++#if defined(ANGLE_PLATFORM_APPLE)
++    if (ExtensionFound(VK_EXT_METAL_OBJECTS_EXTENSION_NAME, deviceExtensionNames))
++    {
++        mEnabledDeviceExtensions.push_back(VK_EXT_METAL_OBJECTS_EXTENSION_NAME);
++    }
++#endif
+ }
+ 
+ // See comment above appendDeviceExtensionFeaturesPromotedTo11.
+-- 
+2.39.3 (Apple Git-146)
+

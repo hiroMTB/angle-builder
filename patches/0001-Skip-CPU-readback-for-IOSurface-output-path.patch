@@ -1,0 +1,38 @@
+From 9a3e21b2751a87d290a9e21103d52f25b864b73c Mon Sep 17 00:00:00 2001
+From: Hiroshi Matoba <matobahiroshi@gmail.com>
+Date: Mon, 16 Feb 2026 15:51:52 +0100
+Subject: [PATCH 1/2] Skip CPU readback for IOSurface output path
+
+Performance improvement: bypass CPU readback when receiving Syphon
+Metal images via IOSurface, keeping the data path entirely on GPU.
+---
+ src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.mm | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.mm b/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.mm
+index 42515c8c6e..28640733fd 100644
+--- a/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.mm
++++ b/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.mm
+@@ -205,6 +205,10 @@ int FindIOSurfaceFormatIndex(GLenum internalFormat, GLenum type)
+         return angle::ToEGL(result, EGL_BAD_SURFACE);
+     }
+ 
++#define SKIP_CPU_READBACK
++#if SKIP_CPU_READBACK
++     return egl::NoError();
++#else
+     gl::Rectangle bounds(0, 0, mWidth, mHeight);
+ 
+     const angle::Format &dstFormat = angle::Format::Get(angle::Format::InternalFormatToID(
+@@ -224,6 +228,8 @@ PackPixelsParams params(bounds, dstFormat, static_cast<GLuint>(outputRowPitchInB
+     IOSurfaceUnlock(mIOSurface, 0, nullptr);
+ 
+     return angle::ToEGL(result, EGL_BAD_SURFACE);
++#endif
++
+ }
+ 
+ // static
+-- 
+2.39.3 (Apple Git-146)
+
