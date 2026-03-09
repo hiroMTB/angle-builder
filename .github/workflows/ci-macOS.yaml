@@ -204,6 +204,13 @@ jobs:
           install_name_tool -id @rpath/libEGL.dylib libEGL.dylib
           install_name_tool -id @rpath/libGLESv2.dylib libGLESv2.dylib
 
+      - name: Verify deployment target
+        run: |
+          echo "libGLESv2.dylib:"
+          otool -l libGLESv2.dylib | grep -A3 minos
+          echo "libEGL.dylib:"
+          otool -l libEGL.dylib | grep -A3 minos
+
       - name: Upload merged universal dylibs
         uses: actions/upload-artifact@v4
         with:
@@ -354,6 +361,13 @@ jobs:
         run: |
           install_name_tool -id @rpath/libEGL.dylib libEGL.dylib
           install_name_tool -id @rpath/libGLESv2.dylib libGLESv2.dylib
+
+      - name: Verify deployment target
+        run: |
+          echo "libGLESv2.dylib:"
+          otool -l libGLESv2.dylib | grep -A3 minos
+          echo "libEGL.dylib:"
+          otool -l libEGL.dylib | grep -A3 minos
 
       - name: Upload merged universal dylibs
         uses: actions/upload-artifact@v4
