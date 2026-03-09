@@ -151,7 +151,11 @@ install_name_tool -id @rpath/libGLESv2.dylib ./out/Debug/libGLESv2.dylib
 install_name_tool -id @rpath/libEGL.dylib ./out/Release/libEGL.dylib
 install_name_tool -id @rpath/libGLESv2.dylib ./out/Release/libGLESv2.dylib
 
-echo 'Suscess building ANGLE'
+echo 'Success building ANGLE'
+echo
+echo 'Verifying deployment target (minos)...'
+otool -l ./out/Release/libGLESv2.dylib | grep -A3 minos
+otool -l ./out/Release/libEGL.dylib | grep -A3 minos
 
 
 # echo 'Create package'
