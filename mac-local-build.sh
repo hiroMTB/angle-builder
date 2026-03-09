@@ -11,8 +11,17 @@
 REVISION=78f1066e993d4305482e3a306747157cb7368d71
 
 echo "Fetching ANGLE source code..., revision $REVISION"
-gclient sync --no-history --shallow -D --revision $REVISION
 
+# Reset any previous patches before syncing
+if [ -d angle ]; then
+  cd angle
+  git am --abort 2>/dev/null
+  git reset --hard $REVISION
+  git clean -fd
+  cd ..
+fi
+
+gclient sync --no-history --shallow -D --revision $REVISION
 
 cd angle
 
