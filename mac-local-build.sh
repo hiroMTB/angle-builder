@@ -66,7 +66,7 @@ build() {
   local config=$1
   local arch=$2
   local libType=$3
-  local args="$COMMON_ARGS target_cpu=\"$arch\" mac_sdk_min=\"14\" mac_deployment_target=\"10.15\""
+  local args="$COMMON_ARGS target_cpu=\"$arch\" mac_sdk_min=\"14\""
 
   if [ "$config" == "Debug" ]; then
     args="$args is_debug=true"
@@ -78,7 +78,7 @@ build() {
   fi
 
   echo "Generating and building $config for $arch, args: $args"
-
+  
   # Generate the build files
   gn gen out/$config/$arch --args="target_cpu=\"$arch\" $args"
 
@@ -104,7 +104,7 @@ build() {
 merge() {
   local config="$1"
     echo "Merging $config $2 with lipo..."
-
+  
   if [ $2 == "static" ]; then
     lipo -create \
       "out/$config/arm64/obj/libEGL_static.a" \
@@ -159,3 +159,18 @@ otool -l ./out/Release/libEGL.dylib | grep -A3 minos
 
 
 # echo 'Create package'
+
+# rm -rf ../package/angle
+# mkdir -p ../package/angle/out/Debug
+# mkdir -p ../package/angle/out/Release
+# cp ./out/Debug/libEGL.dylib ../package/angle/out/Debug/libEGL.dylib
+# cp ./out/Debug/libGLESv2.dylib ../package/angle/out/Debug/libGLESv2.dylib
+# cp ./out/Release/libEGL.dylib ../package/angle/out/Release/libEGL.dylib
+# cp ./out/Release/libGLESv2.dylib ../package/angle/out/Release/libGLESv2.dylib
+
+# cp -R ./include ../package/angle/include
+
+# echo 'Move package to Isadora repo'
+
+# rm -rf ../../isadora/angle
+# cp -R ../package/angle ../../isadora/angle
