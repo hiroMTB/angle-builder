@@ -1,0 +1,121 @@
+From 214911ff7b6c74462137b08fd30a3c5478fc33e6 Mon Sep 17 00:00:00 2001
+From: Hiroshi Matoba <matobahiroshi@gmail.com>
+Date: Tue, 31 Mar 2026 18:00:36 +0200
+Subject: [PATCH] Support predefined Vulkan border colors for
+ GL_CLAMP_TO_BORDER without VK_EXT_custom_border_color
+
+When the border color matches a predefined Vulkan border color (transparent
+black, opaque black, or opaque white), use the predefined enum directly
+instead of requiring VK_EXT_custom_border_color. This enables
+GL_EXT_texture_border_clamp on drivers like MoltenVK that support
+CLAMP_TO_BORDER address mode but not VK_EXT_custom_border_color.
+
+Non-predefined colors still require VK_EXT_custom_border_color as before.
+---
+ .../renderer/vulkan/vk_cache_utils.cpp        | 62 ++++++++++++++-----
+ .../renderer/vulkan/vk_caps_utils.cpp         |  7 ++-
+ 2 files changed, 50 insertions(+), 19 deletions(-)
+
+diff --git a/src/libANGLE/renderer/vulkan/vk_cache_utils.cpp b/src/libANGLE/renderer/vulkan/vk_cache_utils.cpp
+index 5e4e28e..e3d8ea7 100644
+--- a/src/libANGLE/renderer/vulkan/vk_cache_utils.cpp
++++ b/src/libANGLE/renderer/vulkan/vk_cache_utils.cpp
+@@ -5826,32 +5826,60 @@ angle::Result SamplerDesc::init(ContextVk *contextVk, Sampler *sampler) const
+         createInfo.addressModeV == VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER ||
+         createInfo.addressModeW == VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER)
+     {
+-        ASSERT(contextVk->getFeatures().supportsCustomBorderColor.enabled);
+-        customBorderColorInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CUSTOM_BORDER_COLOR_CREATE_INFO_EXT;
+-
+-        // Currently it is not required to set the format in customBorderColorInfo, because the
+-        // feature supportsCustomBorderColor currently requires customBorderColorWithoutFormat to
+-        // be enabled.
+         angle::ColorF customColor = mBorderColor;
+-        if (mBorderColorType == static_cast<uint32_t>(angle::ColorGeneric::Type::Float))
++        bool isFloat = mBorderColorType == static_cast<uint32_t>(angle::ColorGeneric::Type::Float);
++
++        // Check if the border color matches a predefined Vulkan border color.
++        // These are always available without VK_EXT_custom_border_color.
++        bool isTransparentBlack = (customColor.red == 0.0f && customColor.green == 0.0f &&
++                                   customColor.blue == 0.0f && customColor.alpha == 0.0f);
++        bool isOpaqueBlack = (customColor.red == 0.0f && customColor.green == 0.0f &&
++                              customColor.blue == 0.0f && customColor.alpha == 1.0f);
++        bool isOpaqueWhite = (customColor.red == 1.0f && customColor.green == 1.0f &&
++                              customColor.blue == 1.0f && customColor.alpha == 1.0f);
++
++        if (isTransparentBlack)
++        {
++            createInfo.borderColor = isFloat ? VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK
++                                             : VK_BORDER_COLOR_INT_TRANSPARENT_BLACK;
++        }
++        else if (isOpaqueBlack)
+         {
+-            createInfo.borderColor = VK_BORDER_COLOR_FLOAT_CUSTOM_EXT;
++            createInfo.borderColor =
++                isFloat ? VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK : VK_BORDER_COLOR_INT_OPAQUE_BLACK;
++        }
++        else if (isOpaqueWhite)
++        {
++            createInfo.borderColor =
++                isFloat ? VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE : VK_BORDER_COLOR_INT_OPAQUE_WHITE;
+         }
+         else
+         {
+-            createInfo.borderColor = VK_BORDER_COLOR_INT_CUSTOM_EXT;
+-            if (mUsesSecondComponentForStencil)
++            // Non-predefined color requires VK_EXT_custom_border_color.
++            ASSERT(contextVk->getFeatures().supportsCustomBorderColor.enabled);
++            customBorderColorInfo.sType =
++                VK_STRUCTURE_TYPE_SAMPLER_CUSTOM_BORDER_COLOR_CREATE_INFO_EXT;
++
++            if (isFloat)
+             {
+-                customColor.green = customColor.red;
++                createInfo.borderColor = VK_BORDER_COLOR_FLOAT_CUSTOM_EXT;
++            }
++            else
++            {
++                createInfo.borderColor = VK_BORDER_COLOR_INT_CUSTOM_EXT;
++                if (mUsesSecondComponentForStencil)
++                {
++                    customColor.green = customColor.red;
++                }
+             }
+-        }
+ 
+-        customBorderColorInfo.customBorderColor.float32[0] = customColor.red;
+-        customBorderColorInfo.customBorderColor.float32[1] = customColor.green;
+-        customBorderColorInfo.customBorderColor.float32[2] = customColor.blue;
+-        customBorderColorInfo.customBorderColor.float32[3] = customColor.alpha;
++            customBorderColorInfo.customBorderColor.float32[0] = customColor.red;
++            customBorderColorInfo.customBorderColor.float32[1] = customColor.green;
++            customBorderColorInfo.customBorderColor.float32[2] = customColor.blue;
++            customBorderColorInfo.customBorderColor.float32[3] = customColor.alpha;
+ 
+-        vk::AddToPNextChain(&createInfo, &customBorderColorInfo);
++            vk::AddToPNextChain(&createInfo, &customBorderColorInfo);
++        }
+     }
+     ANGLE_VK_TRY(contextVk, sampler->init(contextVk->getDevice(), createInfo));
+ 
+diff --git a/src/libANGLE/renderer/vulkan/vk_caps_utils.cpp b/src/libANGLE/renderer/vulkan/vk_caps_utils.cpp
+index d42122e..156796f 100644
+--- a/src/libANGLE/renderer/vulkan/vk_caps_utils.cpp
++++ b/src/libANGLE/renderer/vulkan/vk_caps_utils.cpp
+@@ -402,8 +402,11 @@ void Renderer::ensureCapsInitialized() const
+     mNativeExtensions.discardFramebufferEXT         = true;
+     mNativeExtensions.stencilTexturingANGLE         = true;
+     mNativeExtensions.packReverseRowOrderANGLE      = true;
+-    mNativeExtensions.textureBorderClampOES = getFeatures().supportsCustomBorderColor.enabled;
+-    mNativeExtensions.textureBorderClampEXT = getFeatures().supportsCustomBorderColor.enabled;
++    // Border clamp is supported either with VK_EXT_custom_border_color (arbitrary colors) or
++    // with predefined Vulkan border colors only (transparent black, opaque black, opaque white).
++    // The latter is always available in Vulkan core and works on MoltenVK/Metal.
++    mNativeExtensions.textureBorderClampOES = true;
++    mNativeExtensions.textureBorderClampEXT = true;
+     mNativeExtensions.polygonModeNV         = mPhysicalDeviceFeatures.fillModeNonSolid == VK_TRUE;
+     mNativeExtensions.polygonModeANGLE      = mPhysicalDeviceFeatures.fillModeNonSolid == VK_TRUE;
+     mNativeExtensions.polygonOffsetClampEXT = mPhysicalDeviceFeatures.depthBiasClamp == VK_TRUE;
+-- 
+2.50.1 (Apple Git-155)
+
