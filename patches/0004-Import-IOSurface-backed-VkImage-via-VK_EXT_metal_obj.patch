@@ -1,4 +1,4 @@
-From 2d4e76a9c610297eb9af314f04887923948c5d9a Mon Sep 17 00:00:00 2001
+From 4338850b04973d12bf8f31c97c4c1657a3b9034c Mon Sep 17 00:00:00 2001
 From: Hiroshi Matoba <matobahiroshi@gmail.com>
 Date: Sat, 11 Jul 2026 21:52:57 +0200
 Subject: [PATCH] Import IOSurface-backed VkImage via VK_EXT_metal_objects for
@@ -16,9 +16,9 @@ import falls back to the existing staged upload path.
 ---
  src/libANGLE/renderer/vulkan/SurfaceVk.cpp    | 15 ++--
  src/libANGLE/renderer/vulkan/SurfaceVk.h      |  4 +-
- .../vulkan/mac/IOSurfaceSurfaceVkMac.h        |  4 ++
- .../vulkan/mac/IOSurfaceSurfaceVkMac.mm       | 68 +++++++++++++++++--
- 4 files changed, 81 insertions(+), 10 deletions(-)
+ .../vulkan/mac/IOSurfaceSurfaceVkMac.h        |  4 +
+ .../vulkan/mac/IOSurfaceSurfaceVkMac.mm       | 73 ++++++++++++++++++-
+ 4 files changed, 86 insertions(+), 10 deletions(-)
 
 diff --git a/src/libANGLE/renderer/vulkan/SurfaceVk.cpp b/src/libANGLE/renderer/vulkan/SurfaceVk.cpp
 index 05ffcb9..c9dbe1e 100644
@@ -93,7 +93,7 @@ index c35aaff..dba884a 100644
  
  }  // namespace rx
 diff --git a/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.mm b/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.mm
-index df1109f..ef7ff1c 100644
+index df1109f..533b22d 100644
 --- a/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.mm
 +++ b/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.mm
 @@ -20,6 +20,8 @@
@@ -126,7 +126,7 @@ index df1109f..ef7ff1c 100644
  }  // anonymous namespace
  
  IOSurfaceSurfaceVkMac::IOSurfaceSurfaceVkMac(const egl::SurfaceState &state,
-@@ -118,10 +134,47 @@ int FindIOSurfaceFormatIndex(GLenum internalFormat, GLenum type)
+@@ -118,10 +134,52 @@ int FindIOSurfaceFormatIndex(GLenum internalFormat, GLenum type)
      const vk::Format &format =
          renderer->getFormat(kIOSurfaceFormats[mFormatIndex].nativeSizedInternalFormat);
  
@@ -163,7 +163,12 @@ index df1109f..ef7ff1c 100644
 +        }
 +        else
 +        {
-+            // The driver rejected the import; release any partial image and fall back.
++            // The driver rejected the import (or allocation failed); release any
++            // partial image and fall back — unless the device is lost.
++            if (renderer->isDeviceLost())
++            {
++                return angle::Result::Stop;
++            }
 +            mColorAttachment.image.releaseImage(renderer);
 +        }
 +    }
@@ -178,7 +183,7 @@ index df1109f..ef7ff1c 100644
  
      mColorRenderTarget.init(&mColorAttachment.image, &mColorAttachment.imageViews, nullptr, nullptr,
                              {}, gl::LevelIndex(0), 0, 1, RenderTargetTransience::Default);
-@@ -158,6 +211,13 @@ int FindIOSurfaceFormatIndex(GLenum internalFormat, GLenum type)
+@@ -158,6 +216,13 @@ int FindIOSurfaceFormatIndex(GLenum internalFormat, GLenum type)
                                                 gl::Texture *texture,
                                                 EGLint buffer)
  {
