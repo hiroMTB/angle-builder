@@ -1,0 +1,197 @@
+From 2d4e76a9c610297eb9af314f04887923948c5d9a Mon Sep 17 00:00:00 2001
+From: Hiroshi Matoba <matobahiroshi@gmail.com>
+Date: Sat, 11 Jul 2026 21:52:57 +0200
+Subject: [PATCH] Import IOSurface-backed VkImage via VK_EXT_metal_objects for
+ zero-copy pbuffers
+
+Create the IOSurface pbuffer's color image with
+VkImportMetalIOSurfaceInfoEXT chained into VkImageCreateInfo, so the
+VkImage is IOSurface-backed from creation and bindTexImage needs no
+IOSurfaceLock, CPU memcpy, or vkCmdCopyBufferToImage per bind; frames
+written by the producer are visible directly.
+
+Limited to non-planar BGRA8 surfaces whose dimensions match the pbuffer.
+Any other case, robust resource init, or a driver that rejects the
+import falls back to the existing staged upload path.
+---
+ src/libANGLE/renderer/vulkan/SurfaceVk.cpp    | 15 ++--
+ src/libANGLE/renderer/vulkan/SurfaceVk.h      |  4 +-
+ .../vulkan/mac/IOSurfaceSurfaceVkMac.h        |  4 ++
+ .../vulkan/mac/IOSurfaceSurfaceVkMac.mm       | 68 +++++++++++++++++--
+ 4 files changed, 81 insertions(+), 10 deletions(-)
+
+diff --git a/src/libANGLE/renderer/vulkan/SurfaceVk.cpp b/src/libANGLE/renderer/vulkan/SurfaceVk.cpp
+index 05ffcb9..c9dbe1e 100644
+--- a/src/libANGLE/renderer/vulkan/SurfaceVk.cpp
++++ b/src/libANGLE/renderer/vulkan/SurfaceVk.cpp
+@@ -182,6 +182,8 @@ angle::Result InitImageHelper(DisplayVk *displayVk,
+                               GLint samples,
+                               bool isRobustResourceInitEnabled,
+                               bool hasProtectedContent,
++                              const void *externalImageCreateInfo,
++                              vk::ImageAccess initialAccess,
+                               vk::ImageHelper *imageHelper)
+ {
+     const angle::Format &textureFormat = vkFormat.getActualRenderableImageFormat();
+@@ -215,9 +217,9 @@ angle::Result InitImageHelper(DisplayVk *displayVk,
+         hasProtectedContent ? VK_IMAGE_CREATE_PROTECTED_BIT : vk::kVkImageCreateFlagsNone;
+     ANGLE_TRY(imageHelper->initExternal(
+         displayVk, gl::TextureType::_2D, extents, vkFormat.getIntendedFormatID(),
+-        renderableFormatId, samples, usage, imageCreateFlags, vk::ImageAccess::Undefined, nullptr,
+-        gl::LevelIndex(0), 1, 1, isRobustResourceInitEnabled, hasProtectedContent,
+-        vk::YcbcrConversionDesc{}, nullptr));
++        renderableFormatId, samples, usage, imageCreateFlags, initialAccess,
++        externalImageCreateInfo, gl::LevelIndex(0), 1, 1, isRobustResourceInitEnabled,
++        hasProtectedContent, vk::YcbcrConversionDesc{}, nullptr));
+ 
+     return angle::Result::Continue;
+ }
+@@ -631,10 +633,13 @@ angle::Result OffscreenSurfaceVk::AttachmentImage::initialize(DisplayVk *display
+                                                               const vk::Format &vkFormat,
+                                                               GLint samples,
+                                                               bool isRobustResourceInitEnabled,
+-                                                              bool hasProtectedContent)
++                                                              bool hasProtectedContent,
++                                                              const void *externalImageCreateInfo,
++                                                              vk::ImageAccess initialAccess)
+ {
+     ANGLE_TRY(InitImageHelper(displayVk, width, height, vkFormat, samples,
+-                              isRobustResourceInitEnabled, hasProtectedContent, &image));
++                              isRobustResourceInitEnabled, hasProtectedContent,
++                              externalImageCreateInfo, initialAccess, &image));
+ 
+     vk::Renderer *renderer      = displayVk->getRenderer();
+     VkMemoryPropertyFlags flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+diff --git a/src/libANGLE/renderer/vulkan/SurfaceVk.h b/src/libANGLE/renderer/vulkan/SurfaceVk.h
+index d786357..317f947 100644
+--- a/src/libANGLE/renderer/vulkan/SurfaceVk.h
++++ b/src/libANGLE/renderer/vulkan/SurfaceVk.h
+@@ -108,7 +108,9 @@ class OffscreenSurfaceVk : public SurfaceVk
+                                  const vk::Format &vkFormat,
+                                  GLint samples,
+                                  bool isRobustResourceInitEnabled,
+-                                 bool hasProtectedContent);
++                                 bool hasProtectedContent,
++                                 const void *externalImageCreateInfo = nullptr,
++                                 vk::ImageAccess initialAccess       = vk::ImageAccess::Undefined);
+ 
+         void destroy(const egl::Display *display);
+ 
+diff --git a/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.h b/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.h
+index c35aaff..dba884a 100644
+--- a/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.h
++++ b/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.h
+@@ -55,6 +55,10 @@ class IOSurfaceSurfaceVkMac : public OffscreenSurfaceVk
+ 
+     int mPlane;
+     int mFormatIndex;
++
++    // True when the color image was created IOSurface-backed via
++    // VK_EXT_metal_objects, making bindTexImage a no-op.
++    bool mZeroCopy = false;
+ };
+ 
+ }  // namespace rx
+diff --git a/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.mm b/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.mm
+index df1109f..ef7ff1c 100644
+--- a/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.mm
++++ b/src/libANGLE/renderer/vulkan/mac/IOSurfaceSurfaceVkMac.mm
+@@ -20,6 +20,8 @@
+ 
+ #include <IOSurface/IOSurface.h>
+ 
++#include "vulkan/vulkan_metal.h"
++
+ namespace rx
+ {
+ 
+@@ -62,6 +64,20 @@ int FindIOSurfaceFormatIndex(GLenum internalFormat, GLenum type)
+     return -1;
+ }
+ 
++bool HasMetalObjectsExtension(vk::Renderer *renderer)
++{
++    for (const char *extensionName : renderer->getEnabledDeviceExtensions())
++    {
++        // The enabled extension list ends with a nullptr entry.
++        if (extensionName != nullptr &&
++            strcmp(extensionName, VK_EXT_METAL_OBJECTS_EXTENSION_NAME) == 0)
++        {
++            return true;
++        }
++    }
++    return false;
++}
++
+ }  // anonymous namespace
+ 
+ IOSurfaceSurfaceVkMac::IOSurfaceSurfaceVkMac(const egl::SurfaceState &state,
+@@ -118,10 +134,47 @@ int FindIOSurfaceFormatIndex(GLenum internalFormat, GLenum type)
+     const vk::Format &format =
+         renderer->getFormat(kIOSurfaceFormats[mFormatIndex].nativeSizedInternalFormat);
+ 
+-    // Swiftshader will use the raw pointer to the buffer referenced by the IOSurfaceRef
+-    ANGLE_TRY(mColorAttachment.initialize(displayVk, mWidth, mHeight, format, samples,
+-                                          mState.isRobustResourceInitEnabled(),
+-                                          mState.hasProtectedContent()));
++    // Zero-copy path: create the color image IOSurface-backed via VK_EXT_metal_objects so
++    // bindTexImage needs no CPU copy or GPU blit. Restricted to the common non-planar BGRA8
++    // case whose dimensions match the surface; anything else keeps the staged upload path.
++    // Robust init or non-zero memory fill would clear the imported contents, so stay staged.
++    bool canImport =
++        HasMetalObjectsExtension(renderer) &&
++        kIOSurfaceFormats[mFormatIndex].nativeSizedInternalFormat == GL_BGRA8_EXT &&
++        IOSurfaceGetPixelFormat(mIOSurface) == 'BGRA' && mPlane == 0 &&
++        static_cast<size_t>(mWidth) == IOSurfaceGetWidthOfPlane(mIOSurface, mPlane) &&
++        static_cast<size_t>(mHeight) == IOSurfaceGetHeightOfPlane(mIOSurface, mPlane) &&
++        !mState.isRobustResourceInitEnabled() && !mState.hasProtectedContent() &&
++        !renderer->getFeatures().allocateNonZeroMemory.enabled;
++
++    if (canImport)
++    {
++        VkImportMetalIOSurfaceInfoEXT importInfo = {};
++        importInfo.sType     = VK_STRUCTURE_TYPE_IMPORT_METAL_IO_SURFACE_INFO_EXT;
++        importInfo.ioSurface = mIOSurface;
++
++        if (mColorAttachment.initialize(displayVk, mWidth, mHeight, format, samples,
++                                        mState.isRobustResourceInitEnabled(),
++                                        mState.hasProtectedContent(), &importInfo,
++                                        vk::ImageAccess::ExternalPreInitialized) ==
++            angle::Result::Continue)
++        {
++            mZeroCopy = true;
++        }
++        else
++        {
++            // The driver rejected the import; release any partial image and fall back.
++            mColorAttachment.image.releaseImage(renderer);
++        }
++    }
++
++    if (!mZeroCopy)
++    {
++        // Swiftshader will use the raw pointer to the buffer referenced by the IOSurfaceRef
++        ANGLE_TRY(mColorAttachment.initialize(displayVk, mWidth, mHeight, format, samples,
++                                              mState.isRobustResourceInitEnabled(),
++                                              mState.hasProtectedContent()));
++    }
+ 
+     mColorRenderTarget.init(&mColorAttachment.image, &mColorAttachment.imageViews, nullptr, nullptr,
+                             {}, gl::LevelIndex(0), 0, 1, RenderTargetTransience::Default);
+@@ -158,6 +211,13 @@ int FindIOSurfaceFormatIndex(GLenum internalFormat, GLenum type)
+                                                gl::Texture *texture,
+                                                EGLint buffer)
+ {
++    if (mZeroCopy)
++    {
++        // The color image is the IOSurface; frames written by the producer are
++        // visible directly, so there is nothing to upload.
++        return egl::NoError();
++    }
++
+     IOSurfaceLock(mIOSurface, 0, nullptr);
+ 
+     ContextVk *contextVk   = vk::GetImpl(context);
+-- 
+2.50.1 (Apple Git-155)
+

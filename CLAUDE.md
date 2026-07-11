@@ -67,6 +67,8 @@ The ANGLE commit hash is pinned in two places that must stay in sync:
 ### Custom patches (applied to ANGLE source)
 1. **`0001-Skip-CPU-readback-for-IOSurface-output-path.patch`** — Bypasses CPU readback in `IOSurfaceSurfaceVkMac.mm` for GPU-only Syphon Metal data path
 2. **`0002-Enable-VK_EXT_metal_objects-device-extension-on-Appl.patch`** — Enables `VK_EXT_metal_objects` in `vk_renderer.cpp` so MTLTexture can be extracted from VkImage via MoltenVK
+3. **`0003-Support-predefined-Vulkan-border-colors-for-GL_CLAMP.patch`** — Enables `GL_EXT_texture_border_clamp` on MoltenVK by using predefined Vulkan border colors when `VK_EXT_custom_border_color` is unavailable
+4. **`0004-Import-IOSurface-backed-VkImage-via-VK_EXT_metal_obj.patch`** — Creates the IOSurface pbuffer's VkImage IOSurface-backed via `VkImportMetalIOSurfaceInfoEXT` (BGRA8, non-planar), making `bindTexImage` zero-copy; falls back to the staged upload path otherwise
 
 ### Build outputs
 - `angle/out/{Debug,Release}/libEGL.dylib` — Universal EGL library
