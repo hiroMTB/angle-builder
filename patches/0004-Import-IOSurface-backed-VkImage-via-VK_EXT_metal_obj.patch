@@ -1,4 +1,4 @@
-From 4338850b04973d12bf8f31c97c4c1657a3b9034c Mon Sep 17 00:00:00 2001
+From 7fdf0fce375b241d932d45d441ba0d8132aee947 Mon Sep 17 00:00:00 2001
 From: Hiroshi Matoba <matobahiroshi@gmail.com>
 Date: Sat, 11 Jul 2026 21:52:57 +0200
 Subject: [PATCH] Import IOSurface-backed VkImage via VK_EXT_metal_objects for
@@ -14,14 +14,14 @@ Limited to non-planar BGRA8 surfaces whose dimensions match the pbuffer.
 Any other case, robust resource init, or a driver that rejects the
 import falls back to the existing staged upload path.
 ---
- src/libANGLE/renderer/vulkan/SurfaceVk.cpp    | 15 ++--
+ src/libANGLE/renderer/vulkan/SurfaceVk.cpp    | 28 +++++--
  src/libANGLE/renderer/vulkan/SurfaceVk.h      |  4 +-
  .../vulkan/mac/IOSurfaceSurfaceVkMac.h        |  4 +
  .../vulkan/mac/IOSurfaceSurfaceVkMac.mm       | 73 ++++++++++++++++++-
- 4 files changed, 86 insertions(+), 10 deletions(-)
+ 4 files changed, 99 insertions(+), 10 deletions(-)
 
 diff --git a/src/libANGLE/renderer/vulkan/SurfaceVk.cpp b/src/libANGLE/renderer/vulkan/SurfaceVk.cpp
-index 05ffcb9..c9dbe1e 100644
+index 05ffcb9..c38d347 100644
 --- a/src/libANGLE/renderer/vulkan/SurfaceVk.cpp
 +++ b/src/libANGLE/renderer/vulkan/SurfaceVk.cpp
 @@ -182,6 +182,8 @@ angle::Result InitImageHelper(DisplayVk *displayVk,
@@ -33,8 +33,23 @@ index 05ffcb9..c9dbe1e 100644
                                vk::ImageHelper *imageHelper)
  {
      const angle::Format &textureFormat = vkFormat.getActualRenderableImageFormat();
-@@ -215,9 +217,9 @@ angle::Result InitImageHelper(DisplayVk *displayVk,
+@@ -213,11 +215,24 @@ angle::Result InitImageHelper(DisplayVk *displayVk,
+ 
+     VkImageCreateFlags imageCreateFlags =
          hasProtectedContent ? VK_IMAGE_CREATE_PROTECTED_BIT : vk::kVkImageCreateFlagsNone;
++
++    // initExternal skips deriving the format-list pNext (sRGB reinterpretation support) when an
++    // external create info is provided; chain it in front so imported images behave like
++    // ordinary ones.
++    VkImageFormatListCreateInfoKHR imageFormatListInfoStorage;
++    vk::ImageHelper::ImageListFormats imageListFormatsStorage;
++    if (externalImageCreateInfo != nullptr)
++    {
++        externalImageCreateInfo = vk::ImageHelper::DeriveCreateInfoPNext(
++            displayVk, usage, renderableFormatId, externalImageCreateInfo,
++            &imageFormatListInfoStorage, &imageListFormatsStorage, &imageCreateFlags);
++    }
++
      ANGLE_TRY(imageHelper->initExternal(
          displayVk, gl::TextureType::_2D, extents, vkFormat.getIntendedFormatID(),
 -        renderableFormatId, samples, usage, imageCreateFlags, vk::ImageAccess::Undefined, nullptr,
@@ -46,7 +61,7 @@ index 05ffcb9..c9dbe1e 100644
  
      return angle::Result::Continue;
  }
-@@ -631,10 +633,13 @@ angle::Result OffscreenSurfaceVk::AttachmentImage::initialize(DisplayVk *display
+@@ -631,10 +646,13 @@ angle::Result OffscreenSurfaceVk::AttachmentImage::initialize(DisplayVk *display
                                                                const vk::Format &vkFormat,
                                                                GLint samples,
                                                                bool isRobustResourceInitEnabled,
